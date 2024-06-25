@@ -13,7 +13,7 @@ nltk.download('punkt')
 nltk.download('stopwords')
 nltk.download('wordnet')
 
-def resumen_texto(nombre_archivo, longitud_resumen):
+def resumen_texto(nombre_archivo, longitud_resumen, archivo_salida):
     # Leer el archivo
     with open(nombre_archivo, 'r', encoding='utf-8') as archivo:
         texto = archivo.read()
@@ -33,6 +33,11 @@ def resumen_texto(nombre_archivo, longitud_resumen):
 
     # Generar el resumen
     resumen = ' '.join([oraciones[i] for i in oraciones_top])
+
+    # Guardar el resumen en un archivo
+    with open(archivo_salida, 'w', encoding='utf-8') as archivo:
+        archivo.write(resumen)
+
     return resumen
 
 def preprocesar_oracion(oracion):
@@ -68,11 +73,11 @@ def responder_pregunta(nombre_archivo, pregunta):
 
 # Ejemplo de uso
 nombre_archivo = "textos_extraidos/texto_parrafos.txt"  # Cambiar por el nombre del archivo real
+archivo_salida = "resumen_pagina_web/resumen.txt"  # Nombre del archivo donde se guardará el resumen
 longitud_resumen = 5  # Cambiar por el número deseado de oraciones
 
-resumen = resumen_texto(nombre_archivo, longitud_resumen)
-print("Resumen:")
-print(resumen)
+resumen = resumen_texto(nombre_archivo, longitud_resumen, archivo_salida)
+print("Resumen guardado en", archivo_salida)
 
 pregunta = "¿Cuál es la idea principal del texto?"  # Cambiar por la pregunta deseada
 respuesta = responder_pregunta(nombre_archivo, pregunta)
