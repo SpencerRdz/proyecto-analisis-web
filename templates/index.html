@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extractor de Contenido Web</title>
+</head>
+<body>
+    <h1>Extractor de Contenido Web</h1>
+    <form method="post">
+        <label for="url">URL:</label>
+        <input type="text" id="url" name="url" required>
+        <br><br>
+        <label for="tipo_contenido">Tipo de Contenido:</label>
+        <select id="tipo_contenido" name="tipo_contenido">
+            <option value="texto">Texto</option>
+            <option value="titulo">Título</option>
+            <option value="imagen">Imagen</option>
+            <option value="enlace">Enlace</option>
+        </select>
+        <br><br>
+        <label for="selector_css">Selector CSS (opcional):</label>
+        <input type="text" id="selector_css" name="selector_css">
+        <br><br>
+        <button type="submit">Extraer</button>
+    </form>
+
+    {% if contenido %}
+    <h2>Contenido Extraído ({{ tipo_contenido }}):</h2>
+    <pre>{{ contenido }}</pre>
+    {% endif %}
+
+    <a href="/resumen">Ir a Generar Resumen</a>
+    <br>
+    <a href="/pregunta">Ir a Preguntar</a>
+</body>
+</html>

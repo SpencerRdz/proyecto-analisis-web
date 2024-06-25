@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preguntar</title>
+</head>
+<body>
+    <h1>Preguntar</h1>
+    <form method="post">
+        <label for="pregunta">Pregunta:</label>
+        <input type="text" id="pregunta" name="pregunta" required>
+        <br><br>
+        <button type="submit">Preguntar</button>
+    </form>
+
+    {% if pregunta %}
+    <h2>Respuesta a la pregunta "{{ pregunta }}":</h2>
+    <pre>{{ respuesta }}</pre>
+    {% endif %}
+
+    <a href="/">Volver</a>
+</body>
+</html>
