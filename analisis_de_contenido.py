@@ -2,11 +2,12 @@ import numpy as np
 import nltk
 from nltk import tokenize
 from nltk.corpus import stopwords
-from nltk.stem import WordNetLemmatizer, PorterStemmer
+from nltk.stem import WordNetLemmatizer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.decomposition import TruncatedSVD
 import heapq
-from transformers import pipeline
+from transformers import pipeline, AutoModelForSeq2SeqLM, AutoTokenizer
+import torch
 
 # Descargar recursos de nltk si es necesario
 nltk.download('punkt')
@@ -19,7 +20,7 @@ def resumen_texto(nombre_archivo, longitud_resumen, archivo_salida):
         texto = archivo.read()
 
     # Limpiar y tokenizar el texto
-    oraciones = tokenize.sent_tokenize(texto.lower())  # Separar en oraciones
+    oraciones = tokenize.sent_tokenize(texto)  # Separar en oraciones
 
     # Preprocesar las oraciones
     oraciones_limpias = [preprocesar_oracion(oracion) for oracion in oraciones]
@@ -34,18 +35,20 @@ def resumen_texto(nombre_archivo, longitud_resumen, archivo_salida):
     # Generar el resumen
     resumen = ' '.join([oraciones[i] for i in oraciones_top])
 
+    # Utilizar un modelo avanzado para refinar el resumen
+    resumen_refinado = refinar_resumen(resumen)
+
     # Guardar el resumen en un archivo
     with open(archivo_salida, 'w', encoding='utf-8') as archivo:
-        archivo.write(resumen)
+        archivo.write(resumen_refinado)
 
-    return resumen
+    return resumen_refinado
 
 def preprocesar_oracion(oracion):
     stop_words = set(stopwords.words('english'))
     lemmatizer = WordNetLemmatizer()
-    stemmer = PorterStemmer()
-    palabras = tokenize.word_tokenize(oracion)
-    palabras_limpias = [stemmer.stem(lemmatizer.lemmatize(palabra)) for palabra in palabras if palabra.isalnum() and palabra not in stop_words]
+    palabras = tokenize.word_tokenize(oracion.lower())
+    palabras_limpias = [lemmatizer.lemmatize(palabra) for palabra in palabras if palabra.isalnum() and palabra not in stop_words]
     return ' '.join(palabras_limpias)
 
 def crear_matriz_tfidf(oraciones):
@@ -59,13 +62,25 @@ def calcular_puntuacion_oracion(matriz_tfidf):
     puntuaciones_oracion = svd.fit_transform(matriz_tfidf)
     return puntuaciones_oracion
 
+def refinar_resumen(resumen):
+    modelo = "facebook/bart-large-cnn"
+    tokenizer = AutoTokenizer.from_pretrained(modelo)
+    modelo = AutoModelForSeq2SeqLM.from_pretrained(modelo)
+    
+    inputs = tokenizer([resumen], max_length=1024, return_tensors='pt', truncation=True)
+    summary_ids = modelo.generate(inputs['input_ids'], max_length=150, min_length=40, length_penalty=2.0, num_beams=4, early_stopping=True)
+    
+    resumen_refinado = tokenizer.decode(summary_ids[0], skip_special_tokens=True)
+    return resumen_refinado
+
 def responder_pregunta(nombre_archivo, pregunta):
     # Leer el archivo
     with open(nombre_archivo, 'r', encoding='utf-8') as archivo:
         texto = archivo.read()
 
-    # Crear un pipeline de preguntas y respuestas
-    qa_pipeline = pipeline("question-answering")
+    # Crear un pipeline de preguntas y respuestas utilizando un modelo avanzado
+    modelo = "deepset/roberta-base-squad2"
+    qa_pipeline = pipeline("question-answering", model=modelo, tokenizer=modelo)
 
     # Realizar la pregunta
     respuesta = qa_pipeline(question=pregunta, context=texto)
