@@ -3,7 +3,7 @@ from bs4 import BeautifulSoup
 from selenium import webdriver
 import time
 
-#siuuuu
+
 def validar_url(url):#!Valida si la URL proporcionada tiene un formato correcto y es accesible.
     try:
         response = requests.head(url)
@@ -129,7 +129,7 @@ def guardar_texto_en_archivo(texto, nombre_archivo):#!Guarda texto en un archivo
 
 if __name__ == '__main__':
     # Ejemplo de uso
-    url = input("ingreza un url: ")
+    url = input("Ingreza un URL: ")
 
     # Extraer texto de párrafos
     texto_parrafos = extraer_contenido(url, 'texto')
@@ -160,4 +160,3 @@ if __name__ == '__main__':
         print("\nEnlaces (URLs):")
         for enlace in enlaces:
             print(enlace)
-            #hola2727
