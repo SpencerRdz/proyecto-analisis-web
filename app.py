@@ -22,11 +22,7 @@ app = Flask(__name__)
 def validar_url(url):
     try:
         response = requests.head(url)
-        if response.status_code == 200:
-            return True
-        else:
-            print(f"Error al validar la URL: {response.status_code}")
-            return False
+        return response.status_code == 200
     except requests.exceptions.RequestException as e:
         print(f"Error de conexión al validar la URL: {e}")
         return False
@@ -36,13 +32,10 @@ def obtener_contenido_web(url):
         return None
     try:
         response = requests.get(url)
-        if response.status_code == 200:
-            return response.text
-        else:
-            print(f"Error al obtener la página: {response.status_code}")
-            return None
+        response.raise_for_status()
+        return response.text
     except requests.exceptions.RequestException as e:
-        print(f"Error de conexión: {e}")
+        print(f"Error al obtener la página: {e}")
         return None
 
 def obtener_html_con_javascript(url):
@@ -84,63 +77,33 @@ def extraer_contenido(url, tipo_contenido, selector_css=None):
     soup = BeautifulSoup(html, 'html.parser')
     
     if tipo_contenido == 'texto':
-        if not selector_css:
-            selector_css = 'p'  # Usar párrafos por defecto
+        selector_css = selector_css or 'p'  # Usar párrafos por defecto
         texto_extraido = extraer_texto(html, selector_css)
         return texto_extraido
 
-    elif tipo_contenido == 'titulo':
-        selector_css = 'h1, h2, h3, h4, h5, h6'
-        titulos = extraer_texto(html, selector_css)
-        if titulos:
-            return titulos.strip()
-        else:
-            return None
+    elementos = soup.select(selector_css)
+    if not elementos:
+        return None
+    
+    if tipo_contenido == 'titulo':
+        return ' '.join([elemento.get_text().strip() for elemento in elementos])
 
     elif tipo_contenido == 'imagen':
-        selector_css = 'img'
-        elementos = soup.select(selector_css)
-        imagenes = []
-        for elemento in elementos:
-            src = elemento.get('src')
-            if src:
-                imagenes.append(src)
-        if imagenes:
-            return imagenes
-        else:
-            return None
+        return [elemento.get('src') for elemento in elementos if elemento.get('src')]
 
     elif tipo_contenido == 'enlace':
-        selector_css = 'a'
-        elementos = soup.select(selector_css)
-        enlaces = []
-        for elemento in elementos:
-            href = elemento.get('href')
-            if href:
-                enlaces.append(href)
-        if enlaces:
-            return enlaces
-        else:
-            return None
-
-    else:
-        raise NotImplementedError(f"Tipo de contenido no implementado: {tipo_contenido}")
+        return [elemento.get('href') for elemento in elementos if elemento.get('href')]
 
 def resumen_texto(nombre_archivo, longitud_resumen, archivo_salida):
     with open(nombre_archivo, 'r', encoding='utf-8') as archivo:
         texto = archivo.read()
 
     oraciones = tokenize.sent_tokenize(texto)
-
     oraciones_limpias = [preprocesar_oracion(oracion) for oracion in oraciones]
-
     matriz_tfidf = crear_matriz_tfidf(oraciones_limpias)
     puntuaciones_oracion = calcular_puntuacion_oracion(matriz_tfidf)
-
     oraciones_top = heapq.nlargest(longitud_resumen, range(len(puntuaciones_oracion)), key=puntuaciones_oracion.__getitem__)
-
     resumen = ' '.join([oraciones[i] for i in oraciones_top])
-
     resumen_refinado = refinar_resumen(resumen)
 
     with open(archivo_salida, 'w', encoding='utf-8') as archivo:
