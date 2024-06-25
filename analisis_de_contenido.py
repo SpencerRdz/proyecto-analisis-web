@@ -73,7 +73,7 @@ def refinar_resumen(resumen):
     resumen_refinado = tokenizer.decode(summary_ids[0], skip_special_tokens=True)
     return resumen_refinado
 
-def responder_pregunta(nombre_archivo, pregunta):
+def responder_pregunta(nombre_archivo, pregunta, umbral_confianza=0.3):
     # Leer el archivo
     with open(nombre_archivo, 'r', encoding='utf-8') as archivo:
         texto = archivo.read()
@@ -84,6 +84,11 @@ def responder_pregunta(nombre_archivo, pregunta):
 
     # Realizar la pregunta
     respuesta = qa_pipeline(question=pregunta, context=texto)
+
+    # Verificar la confianza de la respuesta
+    if respuesta['score'] < umbral_confianza:
+        return "No se han encontrado datos sobre tu pregunta"
+    
     return respuesta['answer']
 
 # Ejemplo de uso
