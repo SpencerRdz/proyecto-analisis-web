@@ -129,7 +129,7 @@ def guardar_texto_en_archivo(texto, nombre_archivo):#!Guarda texto en un archivo
 
 if __name__ == '__main__':
     # Ejemplo de uso
-    url = 'https://es.wikipedia.org/wiki/Wikipedia_en_español'
+    url = input("ingreza un url: ")
 
     # Extraer texto de párrafos
     texto_parrafos = extraer_contenido(url, 'texto')
