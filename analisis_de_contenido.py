@@ -79,7 +79,10 @@ longitud_resumen = 5  # Cambiar por el número deseado de oraciones
 resumen = resumen_texto(nombre_archivo, longitud_resumen, archivo_salida)
 print("Resumen guardado en", archivo_salida)
 
-pregunta = "¿Cuál es la idea principal del texto?"  # Cambiar por la pregunta deseada
-respuesta = responder_pregunta(nombre_archivo, pregunta)
-print("Respuesta a la pregunta:")
-print(respuesta)
+while True:
+    pregunta = input("Ingrese su pregunta (o 'salir' para terminar): ")
+    if pregunta.lower() == 'salir':
+        break
+    respuesta = responder_pregunta(nombre_archivo, pregunta)
+    print("Respuesta a la pregunta:")
+    print(respuesta)
