@@ -2,6 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 from selenium import webdriver
 import time
+from transformers import BartTokenizer, BartForConditionalGeneration
 
 
 def validar_url(url):#!Valida si la URL proporcionada tiene un formato correcto y es accesible.
@@ -161,3 +162,18 @@ if __name__ == '__main__':
         for enlace in enlaces:
             print(enlace)
         
+def generar_resumen(texto):
+    tokenizer = BartTokenizer.from_pretrained("facebook/bart-large-cnn")
+    model = BartForConditionalGeneration.from_pretrained("facebook/bart-large-cnn")
+
+    inputs = tokenizer.encode("summarize: " + texto, return_tensors="pt", max_length=1024, truncation=True)
+    resumen_ids = model.generate(inputs, max_length=150, min_length=40, length_penalty=2.0, num_beams=4, early_stopping=True)
+
+    resumen = tokenizer.decode(resumen_ids[0], skip_special_tokens=True)
+    return resumen
+
+# Ejemplo de uso
+texto_ejemplo = "Aquí va el texto que deseas resumir..."
+resumen_generado = generar_resumen(texto_ejemplo)
+print("Resumen generado:")
+print(resumen_generado)
