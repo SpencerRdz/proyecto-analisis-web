@@ -3,7 +3,7 @@ from bs4 import BeautifulSoup
 from selenium import webdriver
 import time
 
-
+#siuuuu
 def validar_url(url):#!Valida si la URL proporcionada tiene un formato correcto y es accesible.
     try:
         response = requests.head(url)
