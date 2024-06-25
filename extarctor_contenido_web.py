@@ -126,7 +126,7 @@ def guardar_texto_en_archivo(texto, nombre_archivo):#!Guarda texto en un archivo
     except Exception as e:
         print(f"Error al guardar el texto: {e}")
 
-
+hola = 124
 if __name__ == '__main__':
     # Ejemplo de uso
     url = input("ingreza un url: ")
