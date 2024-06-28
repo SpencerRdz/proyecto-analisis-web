@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template
+from flask import Flask, request, render_template, jsonify
 import requests
 from bs4 import BeautifulSoup
 from selenium import webdriver
@@ -22,7 +22,11 @@ app = Flask(__name__)
 def validar_url(url):
     try:
         response = requests.head(url)
-        return response.status_code == 200
+        if response.status_code == 200:
+            return True
+        else:
+            print(f"Error al validar la URL: {response.status_code}")
+            return False
     except requests.exceptions.RequestException as e:
         print(f"Error de conexión al validar la URL: {e}")
         return False
@@ -32,10 +36,13 @@ def obtener_contenido_web(url):
         return None
     try:
         response = requests.get(url)
-        response.raise_for_status()
-        return response.text
+        if response.status_code == 200:
+            return response.text
+        else:
+            print(f"Error al obtener la página: {response.status_code}")
+            return None
     except requests.exceptions.RequestException as e:
-        print(f"Error al obtener la página: {e}")
+        print(f"Error de conexión: {e}")
         return None
 
 def obtener_html_con_javascript(url):
@@ -55,17 +62,7 @@ def obtener_html_con_javascript(url):
         print(f"Error al obtener HTML con JavaScript: {e}")
         return None
 
-def extraer_texto(html, selector_css):
-    try:
-        soup = BeautifulSoup(html, 'html.parser')
-        elementos = soup.select(selector_css)
-        texto = ' '.join([elemento.get_text() for elemento in elementos])
-        return texto
-    except Exception as e:
-        print(f"Error al extraer texto del HTML: {e}")
-        return None
-
-def extraer_contenido(url, tipo_contenido, selector_css=None):
+def extraer_contenido(url, tipo_contenido):
     if tipo_contenido not in ('titulo', 'imagen', 'enlace', 'texto'):
         print(f"Tipo de contenido no válido: {tipo_contenido}")
         return None
@@ -77,33 +74,40 @@ def extraer_contenido(url, tipo_contenido, selector_css=None):
     soup = BeautifulSoup(html, 'html.parser')
     
     if tipo_contenido == 'texto':
-        selector_css = selector_css or 'p'  # Usar párrafos por defecto
-        texto_extraido = extraer_texto(html, selector_css)
+        selector_css = 'p'
+        texto_extraido = ' '.join([elemento.get_text() for elemento in soup.select(selector_css)])
         return texto_extraido
 
-    elementos = soup.select(selector_css)
-    if not elementos:
-        return None
-    
-    if tipo_contenido == 'titulo':
-        return ' '.join([elemento.get_text().strip() for elemento in elementos])
+    elif tipo_contenido == 'titulo':
+        selector_css = 'h1, h2, h3, h4, h5, h6'
+        titulos = ' '.join([elemento.get_text() for elemento in soup.select(selector_css)])
+        return titulos.strip() if titulos else None
 
     elif tipo_contenido == 'imagen':
-        return [elemento.get('src') for elemento in elementos if elemento.get('src')]
+        selector_css = 'img'
+        imagenes = [elemento.get('src') for elemento in soup.select(selector_css) if elemento.get('src')]
+        return imagenes if imagenes else None
 
     elif tipo_contenido == 'enlace':
-        return [elemento.get('href') for elemento in elementos if elemento.get('href')]
+        selector_css = 'a'
+        enlaces = [elemento.get('href') for elemento in soup.select(selector_css) if elemento.get('href')]
+        return enlaces if enlaces else None
 
 def resumen_texto(nombre_archivo, longitud_resumen, archivo_salida):
     with open(nombre_archivo, 'r', encoding='utf-8') as archivo:
         texto = archivo.read()
 
     oraciones = tokenize.sent_tokenize(texto)
+
     oraciones_limpias = [preprocesar_oracion(oracion) for oracion in oraciones]
+
     matriz_tfidf = crear_matriz_tfidf(oraciones_limpias)
     puntuaciones_oracion = calcular_puntuacion_oracion(matriz_tfidf)
+
     oraciones_top = heapq.nlargest(longitud_resumen, range(len(puntuaciones_oracion)), key=puntuaciones_oracion.__getitem__)
+
     resumen = ' '.join([oraciones[i] for i in oraciones_top])
+
     resumen_refinado = refinar_resumen(resumen)
 
     with open(archivo_salida, 'w', encoding='utf-8') as archivo:
@@ -155,45 +159,35 @@ def responder_pregunta(nombre_archivo, pregunta, umbral_confianza=0.3):
 
 @app.route('/', methods=['GET', 'POST'])
 def home():
-    if request.method == 'POST':
-        url = request.form['url']
-        tipo_contenido = request.form['tipo_contenido']
-        selector_css = request.form.get('selector_css', None)
+    return render_template('index.html')
 
-        if not selector_css:
-            selector_css = {
-                'texto': 'p',
-                'titulo': 'h1, h2, h3, h4, h5, h6',
-                'imagen': 'img',
-                'enlace': 'a'
-            }.get(tipo_contenido, 'p')
-        
-        contenido = extraer_contenido(url, tipo_contenido, selector_css)
+@app.route('/chat', methods=['POST'])
+def chat():
+    data = request.json
+    url = data.get('url')
+    tipo_contenido = data.get('tipo_contenido')
+    longitud_resumen = data.get('longitud_resumen')
+    pregunta = data.get('pregunta')
+
+    respuesta = {}
+    
+    if url and tipo_contenido:
+        contenido = extraer_contenido(url, tipo_contenido)
         if tipo_contenido == 'texto' and contenido:
             with open('textos_extraidos/texto_parrafos.txt', 'w', encoding='utf-8') as f:
                 f.write(contenido)
-        return render_template('index.html', contenido=contenido, tipo_contenido=tipo_contenido)
+        respuesta['contenido'] = contenido
 
-    return render_template('index.html')
-
-@app.route('/resumen', methods=['GET', 'POST'])
-def resumen():
-    if request.method == 'POST':
-        longitud_resumen = int(request.form['longitud_resumen'])
+    if longitud_resumen:
         archivo_salida = 'resumen_pagina_web/resumen.txt'
         resumen = resumen_texto('textos_extraidos/texto_parrafos.txt', longitud_resumen, archivo_salida)
-        return render_template('resumen.html', resumen=resumen, archivo_salida=archivo_salida)
+        respuesta['resumen'] = resumen
 
-    return render_template('resumen.html')
+    if pregunta:
+        respuesta_pregunta = responder_pregunta('textos_extraidos/texto_parrafos.txt', pregunta)
+        respuesta['respuesta'] = respuesta_pregunta
 
-@app.route('/pregunta', methods=['GET', 'POST'])
-def pregunta():
-    if request.method == 'POST':
-        pregunta = request.form['pregunta']
-        respuesta = responder_pregunta('textos_extraidos/texto_parrafos.txt', pregunta)
-        return render_template('pregunta.html', pregunta=pregunta, respuesta=respuesta)
-
-    return render_template('pregunta.html')
+    return jsonify(respuesta)
 
 if __name__ == '__main__':
     app.run(debug=True)
